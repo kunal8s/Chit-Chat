@@ -33,7 +33,10 @@ app.use("/api/auth",authRoutes)
 app.use("/api/messages",messageRoutes) 
 app.use("/api/users",userRoutes)
 
-
+// Health check endpoint for Docker container health monitoring
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 
 

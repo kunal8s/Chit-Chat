@@ -1,0 +1,14 @@
+# .dockerignore for backend build (context = project root)
+node_modules
+Frontend/node_modules
+Frontend/dist
+npm-debug.log*
+.env
+.git
+.gitignore
+*.md
+docker-compose.yml
+docker-compose.override.yml
+.env.docker
+.env.docker.local
+nginx/

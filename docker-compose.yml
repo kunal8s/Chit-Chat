@@ -1,0 +1,102 @@
+# ============================================
+# Docker Compose — Chit-Chat Application Stack
+# ============================================
+# Services:
+#   1. mongodb       — MongoDB 7 database with persistent volume
+#   2. backend       — Node.js Express + Socket.io server
+#   3. frontend      — React Vite app served by Nginx
+#   4. nginx         — Reverse proxy routing traffic
+#
+# Usage:
+#   docker compose up --build        (start all services)
+#   docker compose down              (stop all services)
+#   docker compose down -v           (stop and remove volumes)
+#
+# ============================================
+
+services:
+
+  # ---- MongoDB Database ----
+  mongodb:
+    image: mongo:7
+    container_name: chat-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - chat-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---- Node.js Backend ----
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    container_name: chat-backend
+    restart: unless-stopped
+    environment:
+      - PORT=5000
+      - MONGO_DB_URI=mongodb://chat-mongodb:27017/chatapp
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - NODE_ENV=production
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - chat-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---- React Frontend ----
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: chat-frontend
+    restart: unless-stopped
+    networks:
+      - chat-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---- Nginx Reverse Proxy ----
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: chat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - chat-network
+
+# ---- Named Volumes ----
+volumes:
+  mongo_data:
+    driver: local
+
+# ---- Network ----
+networks:
+  chat-network:
+    driver: bridge

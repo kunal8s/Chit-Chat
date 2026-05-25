@@ -7,8 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server,{
     cors:{
-        origin:["http://localhost:3000"],
-        // origin:["https://chit-chat-s2op.onrender.com/"], here no need to change 
+        origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ["http://localhost:3000"],
         methods:["GET","POST"]
     }
 });
